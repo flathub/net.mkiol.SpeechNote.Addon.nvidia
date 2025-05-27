@@ -174,52 +174,6 @@ modules:
         url: https://mirror.sunred.org/archlinux/extra/os/x86_64/nccl-2.26.5-1-x86_64.pkg.tar.zst
         sha256: 14136cfcf9fa34b8ddf1300a16b2649143882d9c9bc09326d21d59c95fd84ed4
 
-  - name: oneapi
-    only-arches:
-      - x86_64
-    buildsystem: simple
-    build-options:
-      strip: true
-    cleanup:
-      - /oneapi
-    build-commands:
-      - sh l_BaseKit_p_2024.0.0.49564_offline.sh --extract-folder ./oneapi -a --eula accept --silent --install-dir ${FLATPAK_DEST}/oneapi
-      - chmod -R +w ${FLATPAK_DEST}/oneapi && echo "done" || echo "done with errors"
-      - |
-        set -e
-        for f in $(find ${FLATPAK_DEST}/oneapi -type f -name "*.so*"); do
-          echo "removing $f"
-          rm -f "$f"
-        done
-    sources:
-      - type: file
-        url: https://registrationcenter-download.intel.com/akdlm/IRC_NAS/20f4e6a1-6b0b-4752-b8c1-e5eacba10e01/l_BaseKit_p_2024.0.0.49564_offline.sh
-        sha256: f6613cb9c79fbf61c2e541144b8d5c70be845e071f29feb5686b64481528276d
-
-  - name: onednn
-    only-arches:
-      - x86_64
-    buildsystem: cmake-ninja
-    build-options:
-      strip: true
-    cleanup:
-      - /bin
-      - /include
-      - /share/doc
-      - /lib/cmake
-    config-opts:
-      - -DCMAKE_BUILD_TYPE=Release
-      - -DONEDNN_LIBRARY_TYPE=STATIC
-      - -DONEDNN_BUILD_EXAMPLES=OFF
-      - -DONEDNN_BUILD_TESTS=OFF
-      - -DONEDNN_ENABLE_WORKLOAD=INFERENCE
-      - -DONEDNN_ENABLE_PRIMITIVE=CONVOLUTION;REORDER
-      - -DONEDNN_BUILD_GRAPH=OFF
-    sources:
-      - type: archive
-        url: https://github.com/oneapi-src/oneDNN/archive/refs/tags/v3.3.1.tar.gz
-        sha256: e0b7a9452162e854cf08b4e90bcd1b382b9903ace6a61503a872573880d24c3f
-
   - name: python3-pybind11
     only-arches:
       - x86_64
@@ -235,44 +189,112 @@ modules:
         url: https://files.pythonhosted.org/packages/06/55/9f73c32dda93fa4f539fafa268f9504e83c489f460c380371d94296126cd/pybind11-2.11.1-py3-none-any.whl
         sha256: 33cdd02a6453380dd71cc70357ce388ad1ee8d32bd0e38fc22b273d050aa29b3
 
+  # Due to the limitations of the Flathub infrastructure, this is not possible to build CUDA version of ctranslate2.
+  # To overcome this problem, pre-compiled binaries from https://github.com/mkiol/dsnote are installed.
   - name: ctranslate2-cuda
     only-arches:
       - x86_64
-    buildsystem: cmake-ninja
+    buildsystem: simple
     build-options:
       env:
         PYTHONPATH: /app/extensions/nvidia/lib/python3.12/site-packages:/app/lib/python3.12/site-packages
-        CTRANSLATE2_ROOT: /app/extensions/nvidia
-        NVCC_APPEND_FLAGS: --compress-mode=size --split-compile=0 -Wno-deprecated-gpu-targets
-    cleanup:
-      - /bin
-      - /include
-      - /lib/cmake
-    config-opts:
-      - -DCMAKE_BUILD_TYPE=Release
-      - -DBUILD_CLI=OFF
-      - -DCUDA_DYNAMIC_LOADING=ON
-      - -DWITH_CUDA=ON
-      - -DWITH_CUDNN=ON
-      - -DOPENMP_RUNTIME=COMP
-      - -DCUDA_ARCH_LIST=5.0 5.2 5.3 6.0 6.1 6.2 7.0 7.2 7.5 8.0 8.6 8.7 8.9 9.0
-      - -DWITH_MKL=ON
-      - -DWITH_DNNL=ON
-      - -DWITH_RUY=ON
-      - -DINTEL_ROOT=/app/extensions/nvidia/oneapi
-      - -DCUDA_TOOLKIT_ROOT_DIR=/app/extensions/nvidia/cuda
-      - -DCMAKE_CXX_FLAGS=-msse4.1 -DTHRUST_IGNORE_CUB_VERSION_CHECK=1
-      - -DCMAKE_SYSTEM_PREFIX_PATH=/app
-    post-install:
-      - cd python && python setup.py bdist_wheel
-      - pip3 install --verbose --exists-action=i --no-index --prefix=${FLATPAK_DEST} --no-build-isolation python/dist/*.whl
-      - strip ${FLATPAK_DEST}/lib/libctranslate2.so.4.3.1
+    build-commands:
+      - pip3 install --verbose --exists-action=i --no-index --prefix=${FLATPAK_DEST} --no-build-isolation *.whl
+      - install -Dm644 *.so* ${FLATPAK_DEST}/lib/
+      - |
+        cd ${FLATPAK_DEST}/lib
+        ln -s libctranslate2.so.4.3.1 libctranslate2.so.4
+        ln -s libctranslate2.so.4.3.1 libctranslate2.so
     sources:
-      - type: git
-        url: https://github.com/OpenNMT/CTranslate2.git
-        commit: v4.3.1
-      - type: patch
-        path: patches/ctranslate2.patch
+      - type: archive
+        strip-components: 0
+        url: https://github.com/mkiol/dsnote/releases/download/b4.8.0-4/flatpak_binaries_nvidia_1_4.tar.xz
+        sha256: 04bbd96b2948bafded85378f6e83a3af51c9527c37b49e76960631e4b648a233
+
+  # - name: oneapi
+  #   only-arches:
+  #     - x86_64
+  #   buildsystem: simple
+  #   build-options:
+  #     strip: true
+  #   cleanup:
+  #     - /oneapi
+  #   build-commands:
+  #     - sh l_BaseKit_p_2024.0.0.49564_offline.sh --extract-folder ./oneapi -a --eula accept --silent --install-dir ${FLATPAK_DEST}/oneapi
+  #     - chmod -R +w ${FLATPAK_DEST}/oneapi && echo "done" || echo "done with errors"
+  #     - |
+  #       set -e
+  #       for f in $(find ${FLATPAK_DEST}/oneapi -type f -name "*.so*"); do
+  #         echo "removing $f"
+  #         rm -f "$f"
+  #       done
+  #   sources:
+  #     - type: file
+  #       url: https://registrationcenter-download.intel.com/akdlm/IRC_NAS/20f4e6a1-6b0b-4752-b8c1-e5eacba10e01/l_BaseKit_p_2024.0.0.49564_offline.sh
+  #       sha256: f6613cb9c79fbf61c2e541144b8d5c70be845e071f29feb5686b64481528276d
+  #
+  # - name: onednn
+  #   only-arches:
+  #     - x86_64
+  #   buildsystem: cmake-ninja
+  #   build-options:
+  #     strip: true
+  #   cleanup:
+  #     - /bin
+  #     - /include
+  #     - /share/doc
+  #     - /lib/cmake
+  #   config-opts:
+  #     - -DCMAKE_BUILD_TYPE=Release
+  #     - -DONEDNN_LIBRARY_TYPE=STATIC
+  #     - -DONEDNN_BUILD_EXAMPLES=OFF
+  #     - -DONEDNN_BUILD_TESTS=OFF
+  #     - -DONEDNN_ENABLE_WORKLOAD=INFERENCE
+  #     - -DONEDNN_ENABLE_PRIMITIVE=CONVOLUTION;REORDER
+  #     - -DONEDNN_BUILD_GRAPH=OFF
+  #   sources:
+  #     - type: archive
+  #       url: https://github.com/oneapi-src/oneDNN/archive/refs/tags/v3.3.1.tar.gz
+  #       sha256: e0b7a9452162e854cf08b4e90bcd1b382b9903ace6a61503a872573880d24c3f
+  #
+  # - name: ctranslate2-cuda
+  #   only-arches:
+  #     - x86_64
+  #   buildsystem: cmake-ninja
+  #   build-options:
+  #     env:
+  #       PYTHONPATH: /app/extensions/nvidia/lib/python3.12/site-packages:/app/lib/python3.12/site-packages
+  #       CTRANSLATE2_ROOT: /app/extensions/nvidia
+  #       NVCC_APPEND_FLAGS: --compress-mode=size --split-compile=0 -Wno-deprecated-gpu-targets
+  #   cleanup:
+  #     - /bin
+  #     - /include
+  #     - /lib/cmake
+  #   config-opts:
+  #     - -DCMAKE_BUILD_TYPE=Release
+  #     - -DBUILD_CLI=OFF
+  #     - -DCUDA_DYNAMIC_LOADING=ON
+  #     - -DWITH_CUDA=ON
+  #     - -DWITH_CUDNN=ON
+  #     - -DOPENMP_RUNTIME=COMP
+  #     - -DCUDA_ARCH_LIST=5.0 5.2 5.3 6.0 6.1 6.2 7.0 7.2 7.5 8.0 8.6 8.7 8.9 9.0
+  #     - -DWITH_MKL=ON
+  #     - -DWITH_DNNL=ON
+  #     - -DWITH_RUY=ON
+  #     - -DINTEL_ROOT=/app/extensions/nvidia/oneapi
+  #     - -DCUDA_TOOLKIT_ROOT_DIR=/app/extensions/nvidia/cuda
+  #     - -DCMAKE_CXX_FLAGS=-msse4.1 -DTHRUST_IGNORE_CUB_VERSION_CHECK=1
+  #     - -DCMAKE_SYSTEM_PREFIX_PATH=/app
+  #   post-install:
+  #     - cd python && python setup.py bdist_wheel
+  #     - pip3 install --verbose --exists-action=i --no-index --prefix=${FLATPAK_DEST} --no-build-isolation python/dist/*.whl
+  #     - strip ${FLATPAK_DEST}/lib/libctranslate2.so.4.3.1
+  #   sources:
+  #     - type: git
+  #       url: https://github.com/OpenNMT/CTranslate2.git
+  #       commit: v4.3.1
+  #     - type: patch
+  #       path: patches/ctranslate2.patch
 
   - name: python3-torch-cuda
     only-arches:
