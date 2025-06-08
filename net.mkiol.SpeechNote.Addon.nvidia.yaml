@@ -243,7 +243,7 @@ modules:
             set -e
             echo
             echo "Installing cuDNN..."
-            tar xf cudnn.tar.xz
+            tar -xf cudnn.tar.xz --no-same-owner --no-same-permissions
             rm -rf cudnn.tar.xz
             mv -T cudnn-linux-x86_64-9.5.1.17_cuda12-archive/lib ./cudnn
             rm -rf cudnn-linux-x86_64-9.5.1.17_cuda12-archive
@@ -260,7 +260,7 @@ modules:
             mv nccl.deb nccl_tmp/
             cd nccl_tmp
             ar x nccl.deb
-            tar xf data.tar.xz
+            tar -xf data.tar.xz --no-same-owner --no-same-permissions
             mv -T usr/lib/x86_64-linux-gnu ../nccl
             cd ..
             rm -rf nccl_tmp
