@@ -1,9 +1,7 @@
 id: net.mkiol.SpeechNote.Addon.nvidia
 runtime: net.mkiol.SpeechNote
 runtime-version: stable
-sdk: org.kde.Sdk//5.15-23.08
-sdk-extensions:
-  - org.freedesktop.Sdk.Extension.llvm16
+sdk: org.kde.Sdk//5.15-24.08
 build-extension: true
 build-options:
   no-debuginfo: true
@@ -17,11 +15,17 @@ modules:
       - x86_64
     buildsystem: simple
     build-commands:
-      - sh cuda_12.4.0_550.54.14_linux.run --target ./ --noexec
+      - sh cuda_12.9.0_575.51.03_linux.run --target ./ --noexec
       - rm -rf builds/*.*
       - rm -rf builds/bin builds/cuda_sanitizer_api builds/integration
       - rm -rf builds/nsight_compute builds/nsight_systems builds/cuda_gdb builds/cuda_documentation
       - mkdir -p ${FLATPAK_DEST}/cuda
+      - |
+        set -e
+        for f in $(find . -name "*.a" | grep -v "libcudart_static.a" | grep -P "static\.a|static_nocallback"); do
+          echo "removing $f"
+          rm -f "$f"
+        done
       - |
         set -e
         cd builds
@@ -40,11 +44,13 @@ modules:
           echo "copying $f => ${FLATPAK_DEST}/cuda/lib64/"
           cp -P $f ${FLATPAK_DEST}/cuda/lib64/
         done
+      - rm -rf builds
+      - rm -rf cuda_12.9.0_575.51.03_linux.run
+      - ${FLATPAK_DEST}/cuda/bin/nvcc nvcc -arch-ls -code-ls
     build-options:
       strip: true
     cleanup:
       - /cuda/bin
-      - /cuda/extras
       - /cuda/extras
       - /cuda/gds*
       - /cuda/include
@@ -69,123 +75,59 @@ modules:
       - /cuda/targets/x86_64-linux/res
     sources:
       - type: file
-        url: https://developer.download.nvidia.com/compute/cuda/12.4.0/local_installers/cuda_12.4.0_550.54.14_linux.run
-        sha256: e6a842f4eca9490575cdb68b6b1bb78d47b95a897de48dee292c431892e57d17
+        url: https://developer.download.nvidia.com/compute/cuda/12.9.0/local_installers/cuda_12.9.0_575.51.03_linux.run
+        sha256: bbce2b760fe2096ca1c86f729e03bf377c1519add7b2755ecc4e9b0a9e07ee43
 
-  - name: whispercpp-cublas
-    only-arches:
-      - x86_64
-    buildsystem: cmake-ninja
-    config-opts:
-      - -DCMAKE_BUILD_TYPE=Release
-      - -DGGML_NATIVE=OFF
-      - -DGGML_CUDA=ON
-      - -DCMAKE_CUDA_ARCHITECTURES=50;52;53;60;61;62;70;72;75;80;86;87;89;90;90a
-      - -DCUDAToolkit_ROOT=/app/extensions/nvidia/cuda
-      - -DCMAKE_CUDA_COMPILER=/app/extensions/nvidia/cuda/bin/nvcc
-      - -DGGML_AVX=ON
-      - -DGGML_AVX2=OFF
-      - -DGGML_FMA=OFF
-      - -DGGML_F16C=ON
-      - -DBUILD_SHARED_LIBS=ON
-      - -DWHISPER_BUILD_TESTS=OFF
-      - -DWHISPER_BUILD_EXAMPLES=OFF
-      - -DCMAKE_C_FLAGS=-O3
-      - -DCMAKE_CXX_FLAGS=-O3
-      - -DWHISPER_TARGET_NAME=whisper-cublas
-    sources:
-      - type: archive
-        url: https://github.com/ggerganov/whisper.cpp/archive/refs/tags/v1.7.1.tar.gz
-        sha256: 97f19a32212f2f215e538ee37a16ff547aaebc54817bd8072034e02466ce6d55
-      - type: patch
-        path: patches/whispercpp.patch
-
-  - name: cudnn
+  - name: cuda-extras
     only-arches:
       - x86_64
     buildsystem: simple
-    build-options:
-      strip: true
-    cleanup:
-      - /cuda/targets/x86_64-linux/lib/libcudnn_*train*
-      - /cuda/targets/x86_64-linux/include
-      - /cuda/include
     build-commands:
-      - mkdir -p ${FLATPAK_DEST}/cuda/include
-      - |
-        set -e
-        cd include
-        for f in *; do
-          echo "copying $f => ${FLATPAK_DEST}/cuda/include"
-          cp -P $f ${FLATPAK_DEST}/cuda/include/
-        done
       - mkdir -p ${FLATPAK_DEST}/cuda/targets/x86_64-linux/lib
       - |
         set -e
-        cd lib
-        for f in *; do
-          echo "copying $f => ${FLATPAK_DEST}/cuda/targets/x86_64-linux/lib"
-          cp -P $f ${FLATPAK_DEST}/cuda/targets/x86_64-linux/lib/
-        done
-    sources:
-      - type: archive
-        url: https://developer.download.nvidia.com/compute/cudnn/redist/cudnn/linux-x86_64/cudnn-linux-x86_64-9.5.1.17_cuda12-archive.tar.xz
-        sha256: 35dd20b9c68324ae1288ac36f66ab1f318d2bfecfafb703a82617aa283272be4
-
-  - name: nccl
-    only-arches:
-      - x86_64
-    buildsystem: simple
-    build-commands:
+        cd ${FLATPAK_DEST}/cuda/targets/x86_64-linux/lib
+        ln -s ${FLATPAK_DEST}/extra/cudnn/libcudnn_adv.so.9.5.1 libcudnn_adv.so.9.5.1
+        ln -s ${FLATPAK_DEST}/extra/cudnn/libcudnn_adv.so.9.5.1 libcudnn_adv.so.9
+        ln -s ${FLATPAK_DEST}/extra/cudnn/libcudnn_adv.so.9.5.1 libcudnn_adv.so
+        ln -s ${FLATPAK_DEST}/extra/cudnn/libcudnn_cnn.so.9.5.1 libcudnn_cnn.so.9.5.1
+        ln -s ${FLATPAK_DEST}/extra/cudnn/libcudnn_cnn.so.9.5.1 libcudnn_cnn.so.9
+        ln -s ${FLATPAK_DEST}/extra/cudnn/libcudnn_cnn.so.9.5.1 libcudnn_cnn.so
+        ln -s ${FLATPAK_DEST}/extra/cudnn/libcudnn_engines_precompiled.so.9.5.1 libcudnn_engines_precompiled.so.9.5.1
+        ln -s ${FLATPAK_DEST}/extra/cudnn/libcudnn_engines_precompiled.so.9.5.1 libcudnn_engines_precompiled.so.9
+        ln -s ${FLATPAK_DEST}/extra/cudnn/libcudnn_engines_precompiled.so.9.5.1 libcudnn_engines_precompiled.so
+        ln -s ${FLATPAK_DEST}/extra/cudnn/libcudnn_engines_runtime_compiled.so.9.5.1 libcudnn_engines_runtime_compiled.so.9.5.1
+        ln -s ${FLATPAK_DEST}/extra/cudnn/libcudnn_engines_runtime_compiled.so.9.5.1 libcudnn_engines_runtime_compiled.so.9
+        ln -s ${FLATPAK_DEST}/extra/cudnn/libcudnn_engines_runtime_compiled.so.9.5.1 libcudnn_engines_runtime_compiled.so
+        ln -s ${FLATPAK_DEST}/extra/cudnn/libcudnn_graph.so.9.5.1 libcudnn_graph.so.9.5.1
+        ln -s ${FLATPAK_DEST}/extra/cudnn/libcudnn_graph.so.9.5.1 libcudnn_graph.so.9
+        ln -s ${FLATPAK_DEST}/extra/cudnn/libcudnn_graph.so.9.5.1 libcudnn_graph.so
+        ln -s ${FLATPAK_DEST}/extra/cudnn/libcudnn_heuristic.so.9.5.1 libcudnn_heuristic.so.9.5.1
+        ln -s ${FLATPAK_DEST}/extra/cudnn/libcudnn_heuristic.so.9.5.1 libcudnn_heuristic.so.9
+        ln -s ${FLATPAK_DEST}/extra/cudnn/libcudnn_heuristic.so.9.5.1 libcudnn_heuristic.so
+        ln -s ${FLATPAK_DEST}/extra/cudnn/libcudnn_ops.so.9.5.1 libcudnn_ops.so.9.5.1
+        ln -s ${FLATPAK_DEST}/extra/cudnn/libcudnn_ops.so.9.5.1 libcudnn_ops.so.9
+        ln -s ${FLATPAK_DEST}/extra/cudnn/libcudnn_ops.so.9.5.1 libcudnn_ops.so
+        ln -s ${FLATPAK_DEST}/extra/cudnn/libcudnn.so.9.5.1 libcudnn.so.9.5.1
+        ln -s ${FLATPAK_DEST}/extra/cudnn/libcudnn.so.9.5.1 libcudnn.so.9
+        ln -s ${FLATPAK_DEST}/extra/cudnn/libcudnn.so.9.5.1 libcudnn.so
       - |
         set -e
-        cd lib
-        for f in *.so*; do
-          echo "copying $f => ${FLATPAK_DEST}/cuda/lib64/"
-          cp -P $f ${FLATPAK_DEST}/cuda/lib64/
-        done
-    build-options:
-      strip: true
+        cd ${FLATPAK_DEST}/cuda/targets/x86_64-linux/lib
+        ln -s ${FLATPAK_DEST}/extra/nccl/libnccl.so.2.26.5 libnccl.so.2.26.5
+        ln -s ${FLATPAK_DEST}/extra/nccl/libnccl.so.2.26.5 libnccl.so.2
+        ln -s ${FLATPAK_DEST}/extra/nccl/libnccl.so.2.26.5 libnccl.so
     sources:
-      - type: archive
-        archive-type: "tar-zst"
-        url: https://mirror.sunred.org/archlinux/extra/os/x86_64/nccl-2.21.5-1-x86_64.pkg.tar.zst
-        sha256: 91c7c06f758416965ba1c5301a1e0cfed1cdddbadb3e936703f3c6dca42d3a95
-
-  - name: oneapi
-    only-arches:
-      - x86_64
-    buildsystem: simple
-    cleanup:
-      - /oneapi
-    build-commands:
-      - sh l_BaseKit_p_2024.0.0.49564_offline.sh --extract-folder ./oneapi -a --eula accept --silent --install-dir ${FLATPAK_DEST}/oneapi
-    sources:
-      - type: file
-        url: https://registrationcenter-download.intel.com/akdlm/IRC_NAS/20f4e6a1-6b0b-4752-b8c1-e5eacba10e01/l_BaseKit_p_2024.0.0.49564_offline.sh
-        sha256: f6613cb9c79fbf61c2e541144b8d5c70be845e071f29feb5686b64481528276d
-
-  - name: onednn
-    only-arches:
-      - x86_64
-    buildsystem: cmake-ninja
-    cleanup:
-      - /bin
-      - /include
-      - /share/doc
-      - /lib/cmake
-    config-opts:
-      - -DCMAKE_BUILD_TYPE=Release
-      - -DONEDNN_LIBRARY_TYPE=STATIC
-      - -DONEDNN_BUILD_EXAMPLES=OFF
-      - -DONEDNN_BUILD_TESTS=OFF
-      - -DONEDNN_ENABLE_WORKLOAD=INFERENCE
-      - -DONEDNN_ENABLE_PRIMITIVE=CONVOLUTION;REORDER
-      - -DONEDNN_BUILD_GRAPH=OFF
-    sources:
-      - type: archive
-        url: https://github.com/oneapi-src/oneDNN/archive/refs/tags/v3.3.1.tar.gz
-        sha256: e0b7a9452162e854cf08b4e90bcd1b382b9903ace6a61503a872573880d24c3f
+      - type: extra-data
+        url: https://developer.download.nvidia.com/compute/cudnn/redist/cudnn/linux-x86_64/cudnn-linux-x86_64-9.5.1.17_cuda12-archive.tar.xz
+        filename: cudnn.tar.xz
+        sha256: 35dd20b9c68324ae1288ac36f66ab1f318d2bfecfafb703a82617aa283272be4
+        size: 744697316
+      - type: extra-data
+        url: https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2404/x86_64/libnccl2_2.26.5-1+cuda12.9_amd64.deb
+        filename: nccl.deb
+        sha256: 9ac19284ba6678e601679b20be8e0187d3b4929c9d65572df538bfc67f00ff2a
+        size: 206186488
 
   - name: python3-pybind11
     only-arches:
@@ -193,7 +135,7 @@ modules:
     buildsystem: simple
     cleanup:
       - /bin
-      - /lib/python3.11/site-packages/pybind11*
+      - /lib/python3.12/site-packages/pybind11*
     build-commands:
       - pip3 install --verbose --exists-action=i --no-index --find-links="file://${PWD}"
         --prefix=${FLATPAK_DEST} "pybind11" --no-build-isolation
@@ -202,107 +144,141 @@ modules:
         url: https://files.pythonhosted.org/packages/06/55/9f73c32dda93fa4f539fafa268f9504e83c489f460c380371d94296126cd/pybind11-2.11.1-py3-none-any.whl
         sha256: 33cdd02a6453380dd71cc70357ce388ad1ee8d32bd0e38fc22b273d050aa29b3
 
-  - name: ctranslate2-cuda
+  # Due to the limitations of the Flathub infrastructure, it is not possible to build CUDA version of ctranslate2 and whisper.cpp.
+  # To overcome this problem, pre-compiled binaries from https://github.com/mkiol/dsnote are installed.
+  - name: precompiled-binaries
     only-arches:
       - x86_64
-    buildsystem: cmake-ninja
+    buildsystem: simple
     build-options:
       env:
-        PYTHONPATH: /app/extensions/nvidia/lib/python3.11/site-packages:/app/lib/python3.11/site-packages
-        CTRANSLATE2_ROOT: /app/extensions/nvidia
+        PYTHONPATH: /app/extensions/nvidia/lib/python3.12/site-packages:/app/lib/python3.12/site-packages
     cleanup:
       - /bin
-      - /include
-      - /lib/cmake
-    config-opts:
-      - -DCMAKE_BUILD_TYPE=Release
-      - -DBUILD_CLI=OFF
-      - -DCUDA_DYNAMIC_LOADING=ON
-      - -DWITH_CUDA=ON
-      - -DWITH_CUDNN=ON
-      - -DOPENMP_RUNTIME=COMP
-      - -DCUDA_ARCH_LIST=5.0 5.2 5.3 6.0 6.1 6.2 7.0 7.2 7.5 8.0 8.6 8.7 8.9 9.0 9.0
-      - -DCUDA_NVCC_FLAGS=-Xfatbin=-compress-all -allow-unsupported-compiler -ccbin /usr/lib/sdk/llvm16/bin/clang++
-      - -DWITH_MKL=ON
-      - -DWITH_DNNL=ON
-      - -DWITH_RUY=ON
-      - -DINTEL_ROOT=/app/extensions/nvidia/oneapi
-      - -DCUDA_TOOLKIT_ROOT_DIR=/app/extensions/nvidia/cuda
-      - -DCMAKE_CXX_FLAGS=-msse4.1 -DTHRUST_IGNORE_CUB_VERSION_CHECK=1
-      - -DCMAKE_SYSTEM_PREFIX_PATH=/app
-    post-install:
-      - cd python && python setup.py bdist_wheel
-      - pip3 install --verbose --exists-action=i --no-index --prefix=${FLATPAK_DEST} --no-build-isolation python/dist/*.whl
-      - strip ${FLATPAK_DEST}/lib/libctranslate2.so.4.3.1
+    build-commands:
+      - pip3 install --verbose --exists-action=i --no-index --prefix=${FLATPAK_DEST} --no-build-isolation *.whl
+      - install -Dm644 *.so* ${FLATPAK_DEST}/lib/
+      - |
+        cd ${FLATPAK_DEST}/lib
+        ln -s libctranslate2.so.4.3.1 libctranslate2.so.4
+        ln -s libctranslate2.so.4.3.1 libctranslate2.so
+        ln -s libwhisper-cublas.so.1.7.1 libwhisper-cublas.so.1
+        ln -s libwhisper-cublas.so.1.7.1 libwhisper-cublas.so
     sources:
-      - type: git
-        url: https://github.com/OpenNMT/CTranslate2.git
-        commit: v4.3.1
-      - type: patch
-        path: patches/ctranslate2.patch
+      - type: archive
+        strip-components: 0
+        url: https://github.com/mkiol/dsnote/releases/download/b4.8.0-4/flatpak_binaries_nvidia_1_4.tar.xz
+        sha256: d940645db57bb22fe78508b0ba14f4de051d50c4c01199d5698396595a936b49
 
   - name: python3-torch-cuda
     only-arches:
       - x86_64
     buildsystem: simple
-    cleanup:
-      - /bin/convert*
-      - /bin/torch*
-      - /lib/python3.11/site-packages/nvidia*
-      - /lib/python3.11/site-packages/torch/include
     build-options:
       strip: true
       env:
-        PYTHONPATH: /app/extensions/nvidia/lib/python3.11/site-packages:/app/lib/python3.11/site-packages
+        PYTHONPATH: /app/extensions/nvidia/lib/python3.12/site-packages:/app/lib/python3.12/site-packages
     build-commands:
-      - pip3 install --verbose --exists-action=i --no-index --find-links="file://${PWD}"
-        --prefix=${FLATPAK_DEST} torch torchaudio triton --no-build-isolation
+      - |
+        set -e
+        mkdir -p ${FLATPAK_DEST}/lib/python3.12/site-packages
+        cd ${FLATPAK_DEST}/lib/python3.12/site-packages
+        ln -s ${FLATPAK_DEST}/extra/site-packages/torch torch
+        ln -s ${FLATPAK_DEST}/extra/site-packages/torch-2.5.1.dist-info torch-2.5.1.dist-info
+        ln -s ${FLATPAK_DEST}/extra/site-packages/functorch functorch
+        ln -s ${FLATPAK_DEST}/extra/site-packages/torchgen torchgen
+        ln -s ${FLATPAK_DEST}/extra/site-packages/torchaudio torchaudio
+        ln -s ${FLATPAK_DEST}/extra/site-packages/torchaudio-2.5.1.dist-info torchaudio-2.5.1.dist-info
+        ln -s ${FLATPAK_DEST}/extra/site-packages/torio torio
+        ln -s ${FLATPAK_DEST}/extra/site-packages/triton triton
+        ln -s ${FLATPAK_DEST}/extra/site-packages/triton-3.1.0.dist-info triton-3.1.0.dist-info
+    sources:
+      - type: extra-data
+        url: https://files.pythonhosted.org/packages/8b/5c/36c114d120bfe10f9323ed35061bc5878cc74f3f594003854b0ea298942f/torch-2.5.1-cp312-cp312-manylinux1_x86_64.whl
+        sha256: ed231a4b3a5952177fafb661213d690a72caaad97d5824dd4fc17ab9e15cec03
+        filename: torch.whl
+        size: 906389343
+      - type: extra-data
+        url: https://files.pythonhosted.org/packages/78/eb/65f5ba83c2a123f6498a3097746607e5b2f16add29e36765305e4ac7fdd8/triton-3.1.0-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
+        sha256: c8182f42fd8080a7d39d666814fa36c5e30cc00ea7eeeb1a2983dbb4c99a0fdc
+        filename: triton.whl
+        size: 209551444
+      - type: extra-data
+        url: https://files.pythonhosted.org/packages/34/1c/345d11bf492a1414dced70a9572ff1eb2c73013578d24fb4d728a91a09d1/torchaudio-2.5.1-cp312-cp312-manylinux1_x86_64.whl
+        sha256: 9c8fb06fbd8d2016e7b7caf15a3231867c792a2e3b0f2f8f9013633e9c2ce412
+        filename: torchaudio.whl
+        size: 3371851
+
+  - name: python3-flash-attn
+    only-arches:
+      - x86_64
+    buildsystem: simple
+    build-options:
+      strip: true
+      env:
+        PYTHONPATH: /app/extensions/nvidia/lib/python3.12/site-packages:/app/lib/python3.12/site-packages
+    build-commands:
+      - pip3 install --verbose --no-deps --exists-action=i --no-index --find-links="file://${PWD}"
+        --prefix=${FLATPAK_DEST} flash-attn --no-build-isolation
     sources:
       - type: file
-        url: https://files.pythonhosted.org/packages/d1/35/e8b2daf02ce933e4518e6f5682c72fd0ed66c15910ea1fb4168f442b71c4/torch-2.5.1-cp311-cp311-manylinux1_x86_64.whl
-        sha256: de5b7d6740c4b636ef4db92be922f0edc425b65ed78c5076c43c42d362a45457
-      - type: file
-        url: https://files.pythonhosted.org/packages/86/17/d9a5cf4fcf46291856d1e90762e36cbabd2a56c7265da0d1d9508c8e3943/triton-3.1.0-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
-        sha256: 0f34f6e7885d1bf0eaaf7ba875a5f0ce6f3c13ba98f9503651c1e6dc6757ed5c
-      - type: file
-        url: https://files.pythonhosted.org/packages/41/33/0f21b15f8e231bb55578f6b32e8c18675585b7bf97cb0aee96b1591e4193/torchaudio-2.5.1-cp311-cp311-manylinux1_x86_64.whl
-        sha256: 7af3f7f92fd33bc9f036a60cdeda4cbeb6bccebd18eae89776dd1e8ed042672e
-      - type: file
-        url: https://files.pythonhosted.org/packages/ae/71/1c91302526c45ab494c23f61c7a84aa568b8c1f9d196efa5993957faf906/nvidia_cublas_cu12-12.4.5.8-py3-none-manylinux2014_x86_64.whl
-        sha256: 2fc8da60df463fdefa81e323eef2e36489e1c94335b5358bcb38360adf75ac9b
-      - type: file
-        url: https://files.pythonhosted.org/packages/67/42/f4f60238e8194a3106d06a058d494b18e006c10bb2b915655bd9f6ea4cb1/nvidia_cuda_cupti_cu12-12.4.127-py3-none-manylinux2014_x86_64.whl
-        sha256: 9dec60f5ac126f7bb551c055072b69d85392b13311fcc1bcda2202d172df30fb
-      - type: file
-        url: https://files.pythonhosted.org/packages/2c/14/91ae57cd4db3f9ef7aa99f4019cfa8d54cb4caa7e00975df6467e9725a9f/nvidia_cuda_nvrtc_cu12-12.4.127-py3-none-manylinux2014_x86_64.whl
-        sha256: a178759ebb095827bd30ef56598ec182b85547f1508941a3d560eb7ea1fbf338
-      - type: file
-        url: https://files.pythonhosted.org/packages/ea/27/1795d86fe88ef397885f2e580ac37628ed058a92ed2c39dc8eac3adf0619/nvidia_cuda_runtime_cu12-12.4.127-py3-none-manylinux2014_x86_64.whl
-        sha256: 64403288fa2136ee8e467cdc9c9427e0434110899d07c779f25b5c068934faa5
-      - type: file
-        url: https://files.pythonhosted.org/packages/9f/fd/713452cd72343f682b1c7b9321e23829f00b842ceaedcda96e742ea0b0b3/nvidia_cudnn_cu12-9.1.0.70-py3-none-manylinux2014_x86_64.whl
-        sha256: 165764f44ef8c61fcdfdfdbe769d687e06374059fbb388b6c89ecb0e28793a6f
-      - type: file
-        url: https://files.pythonhosted.org/packages/27/94/3266821f65b92b3138631e9c8e7fe1fb513804ac934485a8d05776e1dd43/nvidia_cufft_cu12-11.2.1.3-py3-none-manylinux2014_x86_64.whl
-        sha256: f083fc24912aa410be21fa16d157fed2055dab1cc4b6934a0e03cba69eb242b9
-      - type: file
-        url: https://files.pythonhosted.org/packages/8a/6d/44ad094874c6f1b9c654f8ed939590bdc408349f137f9b98a3a23ccec411/nvidia_curand_cu12-10.3.5.147-py3-none-manylinux2014_x86_64.whl
-        sha256: a88f583d4e0bb643c49743469964103aa59f7f708d862c3ddb0fc07f851e3b8b
-      - type: file
-        url: https://files.pythonhosted.org/packages/3a/e1/5b9089a4b2a4790dfdea8b3a006052cfecff58139d5a4e34cb1a51df8d6f/nvidia_cusolver_cu12-11.6.1.9-py3-none-manylinux2014_x86_64.whl
-        sha256: 19e33fa442bcfd085b3086c4ebf7e8debc07cfe01e11513cc6d332fd918ac260
-      - type: file
-        url: https://files.pythonhosted.org/packages/db/f7/97a9ea26ed4bbbfc2d470994b8b4f338ef663be97b8f677519ac195e113d/nvidia_cusparse_cu12-12.3.1.170-py3-none-manylinux2014_x86_64.whl
-        sha256: ea4f11a2904e2a8dc4b1833cc1b5181cde564edd0d5cd33e3c168eff2d1863f1
-      - type: file
-        url: https://files.pythonhosted.org/packages/df/99/12cd266d6233f47d00daf3a72739872bdc10267d0383508b0b9c84a18bb6/nvidia_nccl_cu12-2.21.5-py3-none-manylinux2014_x86_64.whl
-        sha256: 8579076d30a8c24988834445f8d633c697d42397e92ffc3f63fa26766d25e0a0
-      - type: file
-        url: https://files.pythonhosted.org/packages/ff/ff/847841bacfbefc97a00036e0fce5a0f086b640756dc38caea5e1bb002655/nvidia_nvjitlink_cu12-12.4.127-py3-none-manylinux2014_x86_64.whl
-        sha256: 06b3b9b25bf3f8af351d664978ca26a16d2c5127dbd53c0497e28d1fb9611d57
-      - type: file
-        url: https://files.pythonhosted.org/packages/87/20/199b8713428322a2f22b722c62b8cc278cc53dffa9705d744484b5035ee9/nvidia_nvtx_cu12-12.4.127-py3-none-manylinux2014_x86_64.whl
-        sha256: 781e950d9b9f60d8241ccea575b32f5105a5baf4c2351cab5256a24869f12a1a
+        url: https://github.com/Dao-AILab/flash-attention/releases/download/v2.7.4.post1/flash_attn-2.7.4.post1+cu12torch2.5cxx11abiFALSE-cp312-cp312-linux_x86_64.whl
+        dest-filename: flash_attn-2.7.4.post1-cp312-cp312-linux_x86_64.whl
+        sha256: a496f383c843ed0cc6e01302556a0947f56828f1ec2b54e5297c4c7eaae39357
+
+  - name: apply-extra-script
+    only-arches:
+      - x86_64
+    buildsystem: simple
+    build-commands:
+      - install -Dm755 apply_extra ${FLATPAK_DEST}/bin/apply_extra
+      - install -Dm755 /usr/bin/ar ${FLATPAK_DEST}/bin/ar
+      - install -Dm644 /usr/lib/x86_64-linux-gnu/libsframe.so.1 ${FLATPAK_DEST}/lib/libsframe.so.1
+      - install -Dm644 /usr/lib/x86_64-linux-gnu/libbfd-2.44.so ${FLATPAK_DEST}/lib/libbfd-2.44.so
+    sources:
+      - type: script
+        dest-filename: apply_extra
+        commands:
+          - |
+            set -e
+            echo
+            echo "Installing cuDNN..."
+            tar -xf cudnn.tar.xz --no-same-owner --no-same-permissions
+            rm -rf cudnn.tar.xz
+            mv -T cudnn-linux-x86_64-9.5.1.17_cuda12-archive/lib ./cudnn
+            rm -rf cudnn-linux-x86_64-9.5.1.17_cuda12-archive
+            for f in $(find ./cudnn -name "*.a"); do
+              rm -f "$f"
+            done
+            for f in $(find ./cudnn -type l); do
+              rm -f "$f"
+            done
+          - |
+            set -e
+            echo "Installing NCCL..."
+            mkdir -p nccl_tmp
+            mv nccl.deb nccl_tmp/
+            cd nccl_tmp
+            ar x nccl.deb
+            tar -xf data.tar.xz --no-same-owner --no-same-permissions
+            mv -T usr/lib/x86_64-linux-gnu ../nccl
+            cd ..
+            rm -rf nccl_tmp
+            for f in $(find ./nccl -type l); do
+              rm -f "$f"
+            done
+          - |
+            set -e
+            echo "Installing PyTorch..."
+            mkdir -p site-packages
+            cd site-packages
+            unzip -q ../torch.whl
+            rm -rf ../torch.whl
+            rm -rf torch/include
+            unzip -q ../triton.whl
+            rm -rf ../triton.whl
+            unzip -q ../torchaudio.whl
+            rm -rf ../torchaudio.whl
 
   - name: metadata
     buildsystem: simple
