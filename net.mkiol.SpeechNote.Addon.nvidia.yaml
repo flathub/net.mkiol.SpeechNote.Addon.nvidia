@@ -1,13 +1,17 @@
 id: net.mkiol.SpeechNote.Addon.nvidia
 runtime: net.mkiol.SpeechNote
 runtime-version: beta
-sdk: org.kde.Sdk//5.15-24.08
+sdk: org.kde.Sdk//6.11
 build-extension: true
 build-options:
   no-debuginfo: true
   prefix: /app/extensions/nvidia
 cleanup:
   - /include
+  - /lib/cmake
+  - /lib/pkgconfig
+  - /share/cmake
+  - /share/pkgconfig
   - "*.a"
 modules:
   - name: cuda
@@ -15,7 +19,7 @@ modules:
       - x86_64
     buildsystem: simple
     build-commands:
-      - sh cuda_12.9.0_575.51.03_linux.run --target ./ --noexec
+      - sh cuda-installer.run --target ./ --noexec
       - rm -rf builds/*.*
       - rm -rf builds/bin builds/cuda_sanitizer_api builds/integration
       - rm -rf builds/nsight_compute builds/nsight_systems builds/cuda_gdb builds/cuda_documentation
@@ -45,11 +49,11 @@ modules:
           cp -P $f ${FLATPAK_DEST}/cuda/lib64/
         done
       - rm -rf builds
-      - rm -rf cuda_12.9.0_575.51.03_linux.run
-      - ${FLATPAK_DEST}/cuda/bin/nvcc nvcc -arch-ls -code-ls
+      - rm -rf cuda-installer.run
     build-options:
       strip: true
     cleanup:
+      - /cuda/doc
       - /cuda/bin
       - /cuda/extras
       - /cuda/gds*
@@ -68,66 +72,61 @@ modules:
       - /cuda/targets/x86_64-linux/lib/libcusolver.so*
       - /cuda/targets/x86_64-linux/lib/libnppif.so*
       - /cuda/targets/x86_64-linux/lib/libcusolverMg.so*
-      - /cuda/targets/x86_64-linux/lib/libcufile*.so*
       - /cuda/targets/x86_64-linux/lib/libcuinj64.so*
       - /cuda/targets/x86_64-linux/lib/libaccinj64.so*
       - /cuda/targets/x86_64-linux/include
       - /cuda/targets/x86_64-linux/res
     sources:
       - type: file
-        url: https://developer.download.nvidia.com/compute/cuda/12.9.0/local_installers/cuda_12.9.0_575.51.03_linux.run
-        sha256: bbce2b760fe2096ca1c86f729e03bf377c1519add7b2755ecc4e9b0a9e07ee43
+        url: https://developer.download.nvidia.com/compute/cuda/13.0.3/local_installers/cuda_13.0.3_580.126.20_linux.run
+        sha256: 79c82c6529d2adfc322336f37b2a7a856655cd739b4803d0af7344db5a69638b
+        dest-filename: cuda-installer.run
 
   - name: cuda-extras
     only-arches:
       - x86_64
     buildsystem: simple
     build-commands:
-      - mkdir -p ${FLATPAK_DEST}/cuda/targets/x86_64-linux/lib
       - |
         set -e
-        cd ${FLATPAK_DEST}/cuda/targets/x86_64-linux/lib
-        ln -s ${FLATPAK_DEST}/extra/cudnn/libcudnn_adv.so.9.5.1 libcudnn_adv.so.9.5.1
-        ln -s ${FLATPAK_DEST}/extra/cudnn/libcudnn_adv.so.9.5.1 libcudnn_adv.so.9
-        ln -s ${FLATPAK_DEST}/extra/cudnn/libcudnn_adv.so.9.5.1 libcudnn_adv.so
-        ln -s ${FLATPAK_DEST}/extra/cudnn/libcudnn_cnn.so.9.5.1 libcudnn_cnn.so.9.5.1
-        ln -s ${FLATPAK_DEST}/extra/cudnn/libcudnn_cnn.so.9.5.1 libcudnn_cnn.so.9
-        ln -s ${FLATPAK_DEST}/extra/cudnn/libcudnn_cnn.so.9.5.1 libcudnn_cnn.so
-        ln -s ${FLATPAK_DEST}/extra/cudnn/libcudnn_engines_precompiled.so.9.5.1 libcudnn_engines_precompiled.so.9.5.1
-        ln -s ${FLATPAK_DEST}/extra/cudnn/libcudnn_engines_precompiled.so.9.5.1 libcudnn_engines_precompiled.so.9
-        ln -s ${FLATPAK_DEST}/extra/cudnn/libcudnn_engines_precompiled.so.9.5.1 libcudnn_engines_precompiled.so
-        ln -s ${FLATPAK_DEST}/extra/cudnn/libcudnn_engines_runtime_compiled.so.9.5.1 libcudnn_engines_runtime_compiled.so.9.5.1
-        ln -s ${FLATPAK_DEST}/extra/cudnn/libcudnn_engines_runtime_compiled.so.9.5.1 libcudnn_engines_runtime_compiled.so.9
-        ln -s ${FLATPAK_DEST}/extra/cudnn/libcudnn_engines_runtime_compiled.so.9.5.1 libcudnn_engines_runtime_compiled.so
-        ln -s ${FLATPAK_DEST}/extra/cudnn/libcudnn_graph.so.9.5.1 libcudnn_graph.so.9.5.1
-        ln -s ${FLATPAK_DEST}/extra/cudnn/libcudnn_graph.so.9.5.1 libcudnn_graph.so.9
-        ln -s ${FLATPAK_DEST}/extra/cudnn/libcudnn_graph.so.9.5.1 libcudnn_graph.so
-        ln -s ${FLATPAK_DEST}/extra/cudnn/libcudnn_heuristic.so.9.5.1 libcudnn_heuristic.so.9.5.1
-        ln -s ${FLATPAK_DEST}/extra/cudnn/libcudnn_heuristic.so.9.5.1 libcudnn_heuristic.so.9
-        ln -s ${FLATPAK_DEST}/extra/cudnn/libcudnn_heuristic.so.9.5.1 libcudnn_heuristic.so
-        ln -s ${FLATPAK_DEST}/extra/cudnn/libcudnn_ops.so.9.5.1 libcudnn_ops.so.9.5.1
-        ln -s ${FLATPAK_DEST}/extra/cudnn/libcudnn_ops.so.9.5.1 libcudnn_ops.so.9
-        ln -s ${FLATPAK_DEST}/extra/cudnn/libcudnn_ops.so.9.5.1 libcudnn_ops.so
-        ln -s ${FLATPAK_DEST}/extra/cudnn/libcudnn.so.9.5.1 libcudnn.so.9.5.1
-        ln -s ${FLATPAK_DEST}/extra/cudnn/libcudnn.so.9.5.1 libcudnn.so.9
-        ln -s ${FLATPAK_DEST}/extra/cudnn/libcudnn.so.9.5.1 libcudnn.so
+        libs=(libcudnn libcudnn_adv libcudnn_cnn libcudnn_engines_precompiled
+              libcudnn_engines_runtime_compiled libcudnn_graph libcudnn_heuristic
+              libcudnn_ops)
+        src_dir="${FLATPAK_DEST}/extra/cudnn/lib"
+        trg_dir="${FLATPAK_DEST}/cuda/targets/x86_64-linux/lib"
+        mkdir -p "${trg_dir}"
+        cd "${trg_dir}"
+        for lib in "${libs[@]}"; do
+          ln -s "${src_dir}/${lib}.so.9.20.0" ${lib}.so.9.20.0
+          ln -s "${src_dir}/${lib}.so.9.20.0" ${lib}.so.9
+          ln -s "${src_dir}/${lib}.so.9.20.0" ${lib}.so
+        done
       - |
         set -e
-        cd ${FLATPAK_DEST}/cuda/targets/x86_64-linux/lib
-        ln -s ${FLATPAK_DEST}/extra/nccl/libnccl.so.2.26.5 libnccl.so.2.26.5
-        ln -s ${FLATPAK_DEST}/extra/nccl/libnccl.so.2.26.5 libnccl.so.2
-        ln -s ${FLATPAK_DEST}/extra/nccl/libnccl.so.2.26.5 libnccl.so
+        src_dir="${FLATPAK_DEST}/extra/site-packages/nvidia"
+        trg_dir="${FLATPAK_DEST}/cuda/targets/x86_64-linux/lib"
+        mkdir -p "${trg_dir}"
+        cd "${trg_dir}"
+        ln -s "${src_dir}/cusparselt/lib/libcusparseLt.so.0" libcusparseLt.so.0
+        ln -s "${src_dir}/nccl/lib/libnccl.so.2" libnccl.so.2
+        ln -s "${src_dir}/nvshmem/lib/libnvshmem_host.so.3" libnvshmem_host.so.3
+        ln -s "${src_dir}/nvshmem/lib/nvshmem_bootstrap_mpi.so.3" nvshmem_bootstrap_mpi.so.3
+        ln -s "${src_dir}/nvshmem/lib/nvshmem_bootstrap_pmi2.so.3" nvshmem_bootstrap_pmi2.so.3
+        ln -s "${src_dir}/nvshmem/lib/nvshmem_bootstrap_pmi.so.3" nvshmem_bootstrap_pmi.so.3
+        ln -s "${src_dir}/nvshmem/lib/nvshmem_bootstrap_pmix.so.3" nvshmem_bootstrap_pmix.so.3
+        ln -s "${src_dir}/nvshmem/lib/nvshmem_bootstrap_shmem.so.3" nvshmem_bootstrap_shmem.so.3
+        ln -s "${src_dir}/nvshmem/lib/nvshmem_bootstrap_uid.so.3" nvshmem_bootstrap_uid.so.3
+        ln -s "${src_dir}/nvshmem/lib/nvshmem_transport_ibdevx.so.3" nvshmem_transport_ibdevx.so.3
+        ln -s "${src_dir}/nvshmem/lib/nvshmem_transport_ibgda.so.3" nvshmem_transport_ibgda.so.3
+        ln -s "${src_dir}/nvshmem/lib/nvshmem_transport_ibrc.so.3" nvshmem_transport_ibrc.so.3
+        ln -s "${src_dir}/nvshmem/lib/nvshmem_transport_libfabric.so.3" nvshmem_transport_libfabric.so.3
+        ln -s "${src_dir}/nvshmem/lib/nvshmem_transport_ucx.so.3" nvshmem_transport_ucx.so.3
     sources:
       - type: extra-data
-        url: https://developer.download.nvidia.com/compute/cudnn/redist/cudnn/linux-x86_64/cudnn-linux-x86_64-9.5.1.17_cuda12-archive.tar.xz
+        url: https://developer.download.nvidia.com/compute/cudnn/redist/cudnn/linux-x86_64/cudnn-linux-x86_64-9.20.0.48_cuda13-archive.tar.xz
         filename: cudnn.tar.xz
-        sha256: 35dd20b9c68324ae1288ac36f66ab1f318d2bfecfafb703a82617aa283272be4
-        size: 744697316
-      - type: extra-data
-        url: https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2404/x86_64/libnccl2_2.26.5-1+cuda12.9_amd64.deb
-        filename: nccl.deb
-        sha256: 9ac19284ba6678e601679b20be8e0187d3b4929c9d65572df538bfc67f00ff2a
-        size: 206186488
+        sha256: 73f091ee57668dc18e8b1b61811c0ddff2ec0b762efe613e9f27f9ebfd6c20c0
+        size: 673041224
 
   - name: python3-pybind11
     only-arches:
@@ -135,14 +134,14 @@ modules:
     buildsystem: simple
     cleanup:
       - /bin
-      - /lib/python3.12/site-packages/pybind11*
+      - /lib/python3.13/site-packages/pybind11*
     build-commands:
       - pip3 install --verbose --exists-action=i --no-index --find-links="file://${PWD}"
         --prefix=${FLATPAK_DEST} "pybind11" --no-build-isolation
     sources:
       - type: file
-        url: https://files.pythonhosted.org/packages/06/55/9f73c32dda93fa4f539fafa268f9504e83c489f460c380371d94296126cd/pybind11-2.11.1-py3-none-any.whl
-        sha256: 33cdd02a6453380dd71cc70357ce388ad1ee8d32bd0e38fc22b273d050aa29b3
+        url: https://files.pythonhosted.org/packages/b3/06/c3a23c9a0263b136c519f033a58d4641e73065fefc7754e9667ec206d992/pybind11-3.0.4-py3-none-any.whl
+        sha256: 961720ee652da51d531b7b2451a6bd2bc042b0106e6d9baa48ecb7d58034ce63
 
   # Due to the limitations of the Flathub infrastructure, it is not possible to build CUDA version of ctranslate2 and whisper.cpp.
   # To overcome this problem, pre-compiled binaries from https://github.com/mkiol/dsnote are installed.
@@ -152,79 +151,74 @@ modules:
     buildsystem: simple
     build-options:
       env:
-        PYTHONPATH: /app/extensions/nvidia/lib/python3.12/site-packages:/app/lib/python3.12/site-packages
+        PYTHONPATH: /app/extensions/nvidia/lib/python3.13/site-packages:/app/lib/python3.13/site-packages
     cleanup:
       - /bin
     build-commands:
       - pip3 install --verbose --exists-action=i --no-index --prefix=${FLATPAK_DEST} --no-build-isolation *.whl
       - install -Dm644 *.so* ${FLATPAK_DEST}/lib/
       - |
+        set -e
         cd ${FLATPAK_DEST}/lib
-        ln -s libctranslate2.so.4.3.1 libctranslate2.so.4
-        ln -s libctranslate2.so.4.3.1 libctranslate2.so
-        ln -s libwhisper-cublas.so.1.7.1 libwhisper-cublas.so.1
-        ln -s libwhisper-cublas.so.1.7.1 libwhisper-cublas.so
+        ln -s libctranslate2.so.4.8.1 libctranslate2.so.4
+        ln -s libctranslate2.so.4.8.1 libctranslate2.so
     sources:
       - type: archive
         strip-components: 0
-        url: https://github.com/mkiol/dsnote/releases/download/b4.8.0-4/flatpak_binaries_nvidia_1_4.tar.xz
-        sha256: d940645db57bb22fe78508b0ba14f4de051d50c4c01199d5698396595a936b49
+        url: https://github.com/mkiol/dsnote/releases/download/b4.9.1-1/flatpak_binaries_nvidia_1_5.tar.xz
+        sha256: 49e6d2f202c4a0daf28fdc97f3cffea3a002d610675b6a6698a10a7995bcb8a2
 
   - name: python3-torch-cuda
     only-arches:
       - x86_64
     buildsystem: simple
     build-options:
-      strip: true
       env:
-        PYTHONPATH: /app/extensions/nvidia/lib/python3.12/site-packages:/app/lib/python3.12/site-packages
+        PYTHONPATH: /app/extensions/nvidia/lib/python3.13/site-packages:/app/lib/python3.13/site-packages
     build-commands:
       - |
         set -e
-        mkdir -p ${FLATPAK_DEST}/lib/python3.12/site-packages
-        cd ${FLATPAK_DEST}/lib/python3.12/site-packages
-        ln -s ${FLATPAK_DEST}/extra/site-packages/torch torch
-        ln -s ${FLATPAK_DEST}/extra/site-packages/torch-2.5.1.dist-info torch-2.5.1.dist-info
-        ln -s ${FLATPAK_DEST}/extra/site-packages/functorch functorch
-        ln -s ${FLATPAK_DEST}/extra/site-packages/torchgen torchgen
-        ln -s ${FLATPAK_DEST}/extra/site-packages/torchaudio torchaudio
-        ln -s ${FLATPAK_DEST}/extra/site-packages/torchaudio-2.5.1.dist-info torchaudio-2.5.1.dist-info
-        ln -s ${FLATPAK_DEST}/extra/site-packages/torio torio
-        ln -s ${FLATPAK_DEST}/extra/site-packages/triton triton
-        ln -s ${FLATPAK_DEST}/extra/site-packages/triton-3.1.0.dist-info triton-3.1.0.dist-info
+        libs=(torch torch-2.12.0.dist-info functorch torchgen
+              torchaudio torchaudio-2.11.0.dist-info
+              triton triton-3.7.0.dist-info)
+        src_dir="${FLATPAK_DEST}/extra/site-packages"
+        trg_dir="${FLATPAK_DEST}/lib/python3.13/site-packages"
+        mkdir -p "${trg_dir}"
+        cd "${trg_dir}"
+        for lib in "${libs[@]}"; do
+          ln -s "${src_dir}/${lib}" ${lib}
+        done
     sources:
       - type: extra-data
-        url: https://files.pythonhosted.org/packages/8b/5c/36c114d120bfe10f9323ed35061bc5878cc74f3f594003854b0ea298942f/torch-2.5.1-cp312-cp312-manylinux1_x86_64.whl
-        sha256: ed231a4b3a5952177fafb661213d690a72caaad97d5824dd4fc17ab9e15cec03
+        url: https://files.pythonhosted.org/packages/49/8a/94bdecd13f5aaa90d45920b89789d9fe7c6f4af8c3cdd7ce01fcb59908fc/torch-2.12.0-cp313-cp313-manylinux_2_28_x86_64.whl
+        sha256: 5d6b560dfa7d56291c07d615c3bb73e8d9943d9b6d87f76cd0d9d570c4797fa6
         filename: torch.whl
-        size: 906389343
+        size: 532269288
       - type: extra-data
-        url: https://files.pythonhosted.org/packages/78/eb/65f5ba83c2a123f6498a3097746607e5b2f16add29e36765305e4ac7fdd8/triton-3.1.0-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
-        sha256: c8182f42fd8080a7d39d666814fa36c5e30cc00ea7eeeb1a2983dbb4c99a0fdc
+        url: https://files.pythonhosted.org/packages/30/b1/b7507bb9815d403927c8dd51d4158ed2e11751a92dbc118a044f247b6848/triton-3.7.0-cp313-cp313-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl
+        sha256: a35d7afe3f3f058e7ec49fcce09794049e0ffc5c59019ac25ec3413741b8c4e7
         filename: triton.whl
-        size: 209551444
+        size: 201453566
       - type: extra-data
-        url: https://files.pythonhosted.org/packages/34/1c/345d11bf492a1414dced70a9572ff1eb2c73013578d24fb4d728a91a09d1/torchaudio-2.5.1-cp312-cp312-manylinux1_x86_64.whl
-        sha256: 9c8fb06fbd8d2016e7b7caf15a3231867c792a2e3b0f2f8f9013633e9c2ce412
+        url: https://files.pythonhosted.org/packages/4f/98/be13fe35d9aa5c26381c0e453c828a789d15c007f8f7d08c95341d19974d/torchaudio-2.11.0-cp313-cp313-manylinux_2_28_x86_64.whl
+        sha256: 1c1101c1243ef0e4063ec63298977e2d3655c15cf88d9eb0a1bd4fe2db9f47ea
         filename: torchaudio.whl
-        size: 3371851
-
-  - name: python3-flash-attn
-    only-arches:
-      - x86_64
-    buildsystem: simple
-    build-options:
-      strip: true
-      env:
-        PYTHONPATH: /app/extensions/nvidia/lib/python3.12/site-packages:/app/lib/python3.12/site-packages
-    build-commands:
-      - pip3 install --verbose --no-deps --exists-action=i --no-index --find-links="file://${PWD}"
-        --prefix=${FLATPAK_DEST} flash-attn --no-build-isolation
-    sources:
-      - type: file
-        url: https://github.com/Dao-AILab/flash-attention/releases/download/v2.7.4.post1/flash_attn-2.7.4.post1+cu12torch2.5cxx11abiFALSE-cp312-cp312-linux_x86_64.whl
-        dest-filename: flash_attn-2.7.4.post1-cp312-cp312-linux_x86_64.whl
-        sha256: a496f383c843ed0cc6e01302556a0947f56828f1ec2b54e5297c4c7eaae39357
+        size: 1771992
+      - type: extra-data
+        url: https://files.pythonhosted.org/packages/34/7d/2661f2fb3ac4302f3a246f5fc030213ac60c1fe0bce84f9783dbd831dbb7/nvidia_cusparselt_cu13-0.8.1-py3-none-manylinux2014_x86_64.whl
+        sha256: 786ce87568c303fadb5afcc7102d454cd3040d75f6f8626f5db460d1871f4dd0
+        filename: nvidia_cusparselt.whl
+        size: 170148586
+      - type: extra-data
+        url: https://files.pythonhosted.org/packages/67/f4/58e4e91b6919367c7aafb8e36fce9aad1a3047e536bf7e2fd560927d3a4c/nvidia_nccl_cu13-2.29.7-py3-none-manylinux_2_18_x86_64.whl
+        sha256: edd81538446786ec3b73972543e53bb43bcaf0bfc8ef76cb679fcc390ffe136d
+        filename: nvidia_nccl.whl
+        size: 205976000
+      - type: extra-data
+        url: https://files.pythonhosted.org/packages/3c/35/a9bf80a609e74e3b000fef598933235c908fcefcef9026042b8e6dfde2a9/nvidia_nvshmem_cu13-3.4.5-py3-none-manylinux2014_x86_64.manylinux_2_17_x86_64.whl
+        sha256: 290f0a2ee94c9f3687a02502f3b9299a9f9fe826e6d0287ee18482e78d495b80
+        filename: nvidia_nvshmem.whl
+        size: 60412546
 
   - name: apply-extra-script
     only-arches:
@@ -232,53 +226,49 @@ modules:
     buildsystem: simple
     build-commands:
       - install -Dm755 apply_extra ${FLATPAK_DEST}/bin/apply_extra
-      - install -Dm755 /usr/bin/ar ${FLATPAK_DEST}/bin/ar
-      - install -Dm644 /usr/lib/x86_64-linux-gnu/libsframe.so.1 ${FLATPAK_DEST}/lib/libsframe.so.1
-      - install -Dm644 /usr/lib/x86_64-linux-gnu/libbfd-2.44.so ${FLATPAK_DEST}/lib/libbfd-2.44.so
     sources:
       - type: script
         dest-filename: apply_extra
         commands:
           - |
-            set -e
             echo
+            echo "Files to install:"
+            ls
+          - |
+            set -e
+            extra_dir="/app/extra"
+            trg_dir="${extra_dir}/cudnn"
             echo "Installing cuDNN..."
-            tar -xf cudnn.tar.xz --no-same-owner --no-same-permissions
+            mkdir -p "${trg_dir}"
+            tar -xf cudnn.tar.xz --no-same-owner --no-same-permissions --strip-components=1 --directory="${trg_dir}"
+
+            # cleanup
             rm -rf cudnn.tar.xz
-            mv -T cudnn-linux-x86_64-9.5.1.17_cuda12-archive/lib ./cudnn
-            rm -rf cudnn-linux-x86_64-9.5.1.17_cuda12-archive
-            for f in $(find ./cudnn -name "*.a"); do
+            for f in $(find "${trg_dir}" -name "*.a"); do
               rm -f "$f"
             done
-            for f in $(find ./cudnn -type l); do
-              rm -f "$f"
-            done
-          - |
-            set -e
-            echo "Installing NCCL..."
-            mkdir -p nccl_tmp
-            mv nccl.deb nccl_tmp/
-            cd nccl_tmp
-            ar x nccl.deb
-            tar -xf data.tar.xz --no-same-owner --no-same-permissions
-            mv -T usr/lib/x86_64-linux-gnu ../nccl
-            cd ..
-            rm -rf nccl_tmp
-            for f in $(find ./nccl -type l); do
+            for f in $(find "${trg_dir}" -type l); do
               rm -f "$f"
             done
           - |
             set -e
+            extra_dir="/app/extra"
+            trg_dir="${extra_dir}/site-packages"
             echo "Installing PyTorch..."
-            mkdir -p site-packages
-            cd site-packages
-            unzip -q ../torch.whl
-            rm -rf ../torch.whl
+            libs=(torch triton torchaudio nvidia_cusparselt nvidia_nccl nvidia_nvshmem)
+            mkdir -p "${trg_dir}"
+            cd "${trg_dir}"
+            for lib in "${libs[@]}"; do
+              echo "Installing ${lib}.whl..."
+              unzip -q ../${lib}.whl
+              rm -rf ../${lib}.whl
+            done
+
+            # cleanup
             rm -rf torch/include
-            unzip -q ../triton.whl
-            rm -rf ../triton.whl
-            unzip -q ../torchaudio.whl
-            rm -rf ../torchaudio.whl
+            for f in $(find . -name "*.a"); do
+              rm -f "$f"
+            done
 
   - name: metadata
     buildsystem: simple
